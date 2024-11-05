@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+#=================================================================
+#Nome do script: script
+#Descrição           : Breve descrição do que o script faz.
+#Autor               : weverton
+#Data                : 04-11-24
+#Versão              : 0.1
+#=================================================================
+#Parâmetros    :
+# -opcao             : descrição da opção
+#  argumento         : descrição do argumento
+#=================================================================
+#=================================================================
+
+DIR="/usr/local/bin/"
+EDITOR="nano"
+DATA=$(date +%d-%m-%y)
+
+
+[[ $# -ne 1 ]] && ls $DIR && exit 0
+
+if [[ -f $1 ]]; then
+
+read -p " Script já existe deseja abrir s/n? " OPT
+
+[[ $OPT == "s" ]] && $EDITOR $DIR$1 || exit 0
+
+fi 
+
+echo "#!/usr/bin/env bash
+#=================================================================
+#Nome do script: script
+#Descrição           : Breve descrição do que o script faz.
+#Autor               : $USER
+#Data                : $DATA
+#Versão              : 0.1
+#=================================================================
+#Parâmetros    :
+# -opcao             : descrição da opção
+#  argumento         : descrição do argumento
+#=================================================================
+#================================================================= 
+"
