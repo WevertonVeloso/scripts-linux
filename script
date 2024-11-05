@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #=================================================================
 #Nome do script: script
-#Descrição           : Breve descrição do que o script faz.
+#Descrição           : script para facilitar a criação de scripts
 #Autor               : weverton
 #Data                : 04-11-24
 #Versão              : 0.1
 #=================================================================
-#Parâmetros    :
-# -opcao             : descrição da opção
-#  argumento         : descrição do argumento
+#Parâmetros          : script < nome > 
+# -opcao             : sem argumento lista todos os scripts criados.
+#  argumento         : < nome do script > que está sendo criado ou que existe
 #=================================================================
 #=================================================================
 
