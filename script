@@ -19,7 +19,7 @@ DATA=$(date +%d-%m-%y)
 
 [[ $# -ne 1 ]] && ls $DIR && exit 0
 
-if [[ -f $1 ]]; then
+if [[ -f $DIR$1 ]]; then
 
 read -p " Script já existe deseja abrir s/n? " OPT
 
@@ -35,7 +35,7 @@ echo "#!/usr/bin/env bash
 #Data                : $DATA
 #Versão              : 0.1
 #=================================================================
-#Parâmetros    :
+#Parâmetros          :
 # -opcao             : descrição da opção
 #  argumento         : descrição do argumento
 #=================================================================
