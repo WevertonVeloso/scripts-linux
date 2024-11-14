@@ -1,0 +1,14 @@
+[Unit]
+Description=Serviço para envio de notificação quando autorizado acesso no controlador de acesso
+After=network-online.target 
+
+
+[Service]
+ExecStart=/usr/local/bin/facial-nf
+Restart=always
+#CPUQuota=10%
+#MemoryHigh=100M
+
+[Install]
+WantedBy=multi-user.target
+Alias=facial.service
