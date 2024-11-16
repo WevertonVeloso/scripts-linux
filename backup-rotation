@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#=================================================================
+#Nome do script: script
+#Descrição           : Script  com funcionalidade semelhante ao logrotate
+#Autor               : weverton
+#Data                : 16-11-24
+#Versão              : 0.1
+#=================================================================
+#Parâmetros          :
+# -opcao             : descrição da opção
+#  argumento         : descrição do argumento
+#=================================================================
+#================================================================= 
+
+#Variável que amarzena  o arquivo, semelhante ao logrotate
+ARQ=/root/pasta/teste
+
+#Variavel que determina a partir de qual arquivo começará a compressão default 0" 
+DELAY=4
+
+#Variavel que determina  o maximo de versões comprimidas
+REMOV=7
+
+ls -tr $ARQ.* 2> /dev/null | while read ARQUIVO; do  
+
+SUFX=${ARQUIVO##*.}
+
+if [[ $SUFX  != "gz" ]]; then
+
+ 
+echo $ARQUIVO
+((  ++SUFX  )) 
+
+mv $ARQUIVO "${ARQUIVO%.*}.$SUFX" 
+
+ if [[ $SUFX -gt $DELAY ]]; then
+    gzip "${ARQUIVO%.*}.$SUFX" 
+
+ fi 
+
+else
+ 
+
+PREFX=${ARQUIVO%.*}
+PRESUFX=${PREFX##*.}
+
+ if [[ $PRESUFX -lt $REMOV ]]; then
+    ((  ++PRESUFX  )) 
+
+    mv $ARQUIVO "${ARQUIVO%%.*}.$PRESUFX.$SUFX"
+    echo "${ARQUIVO%%.*}.$PRESUFX.$SUFX" 
+ else
+  
+  rm $ARQUIVO
+ fi
+ 
+
+fi
+
+done
+
+
+mv $ARQ "$ARQ.1" 
+[[ $DELAY -eq 0 ]] && gzip /root/pasta/teste.1
+> $ARQ
