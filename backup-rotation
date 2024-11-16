@@ -1,65 +1,55 @@
 #!/usr/bin/env bash
 #=================================================================
-#Nome do script: script
-#Descrição           : Script  com funcionalidade semelhante ao logrotate
-#Autor               : weverton
-#Data                : 16-11-24
-#Versão              : 0.1
+# Nome do script: script
+# Descrição      : Script com funcionalidade semelhante ao logrotate
+# Autor          : Weverton
+# Data           : 16-11-24
+# Versão         : 0.2
 #=================================================================
-#Parâmetros          :
-# -opcao             : descrição da opção
-#  argumento         : descrição do argumento
-#=================================================================
-#================================================================= 
 
-#Variável que amarzena  o arquivo, semelhante ao logrotate
-ARQ=/root/pasta/teste
+# Configurações principais
+ARQ="/root/pasta/teste"  # Arquivo a ser rotacionado
+DELAY=4                 # Número de arquivos antes da compressão
+REMOV=7                 # Número máximo de backups a serem mantidos
 
-#Variavel que determina a partir de qual arquivo começará a compressão default 0" 
-DELAY=4
+# Função para rotacionar e gerenciar os backups
+rotate_logs() {
+    # Listar arquivos rotacionados ordenados por tempo (do mais antigo para o mais recente)
+    ls -tr "$ARQ".* 2>/dev/null | while read -r ARQUIVO; do
+        SUFX="${ARQUIVO##*.}"  # Sufixo atual (ex.: .1, .gz)
 
-#Variavel que determina  o maximo de versões comprimidas
-REMOV=7
+        if [[ "$SUFX" != "gz" ]]; then
+            # Incrementa o número do sufixo
+            ((++SUFX))
+            mv "$ARQUIVO" "${ARQUIVO%.*}.$SUFX"
 
-ls -tr $ARQ.* 2> /dev/null | while read ARQUIVO; do  
+            # Compacta se o novo número for maior que DELAY
+            if [[ "$SUFX" -gt "$DELAY" ]]; then
+                gzip "${ARQUIVO%.*}.$SUFX"
+            fi
+        else
+            # Lida com arquivos compactados (.gz)
+            PREFX="${ARQUIVO%.*}"
+            PRESUFX="${PREFX##*.}"
 
-SUFX=${ARQUIVO##*.}
+            if [[ "$PRESUFX" -lt "$REMOV" ]]; then
+                ((++PRESUFX))
+                mv "$ARQUIVO" "${ARQUIVO%%.*}.$PRESUFX.gz"
+            else
+                # Remove arquivos excedentes
+                rm "$ARQUIVO"
+            fi
+        fi
+    done
+}
 
-if [[ $SUFX  != "gz" ]]; then
+# Realiza a rotação do arquivo atual
+rotate_current_log() {
+    mv "$ARQ" "$ARQ.1"  # Renomeia o arquivo atual para .1
+    [[ "$DELAY" -eq 0 ]] && gzip "$ARQ.1"  # Compacta imediatamente se DELAY for 0
+    : > "$ARQ"  # Cria um arquivo vazio
+}
 
- 
-echo $ARQUIVO
-((  ++SUFX  )) 
-
-mv $ARQUIVO "${ARQUIVO%.*}.$SUFX" 
-
- if [[ $SUFX -gt $DELAY ]]; then
-    gzip "${ARQUIVO%.*}.$SUFX" 
-
- fi 
-
-else
- 
-
-PREFX=${ARQUIVO%.*}
-PRESUFX=${PREFX##*.}
-
- if [[ $PRESUFX -lt $REMOV ]]; then
-    ((  ++PRESUFX  )) 
-
-    mv $ARQUIVO "${ARQUIVO%%.*}.$PRESUFX.$SUFX"
-    echo "${ARQUIVO%%.*}.$PRESUFX.$SUFX" 
- else
-  
-  rm $ARQUIVO
- fi
- 
-
-fi
-
-done
-
-
-mv $ARQ "$ARQ.1" 
-[[ $DELAY -eq 0 ]] && gzip /root/pasta/teste.1
-> $ARQ
+# Execução principal
+rotate_logs
+rotate_current_log
