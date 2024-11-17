@@ -1,55 +1,87 @@
 #!/usr/bin/env bash
 #=================================================================
-# Nome do script: script
-# Descrição      : Script com funcionalidade semelhante ao logrotate
+# Nome do script : log_rotate.sh
+# Descrição      : Script de rotação de logs com funcionalidade semelhante ao logrotate
 # Autor          : Weverton
 # Data           : 16-11-24
-# Versão         : 0.2
+# Versão         : 0.3
 #=================================================================
 
 # Configurações principais
-ARQ="/root/pasta/teste"  # Arquivo a ser rotacionado
-DELAY=4                 # Número de arquivos antes da compressão
-REMOV=7                 # Número máximo de backups a serem mantidos
+LOG_FILE="/root/pasta/teste"  # Arquivo de log base a ser rotacionado
+DELAY=4                      # Número de backups antes da compressão
+MAX_BACKUPS=7                # Número máximo de backups a serem mantidos
+LOG_OUTPUT="/var/log/log_rotate_script.log"  # Local para registrar execuções (opcional)
 
-# Função para rotacionar e gerenciar os backups
+# Função para registrar mensagens no log de execução
+log_message() {
+    local message="$1"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" | tee -a "$LOG_OUTPUT"
+}
+
+# Função para validar as configurações iniciais
+validate_config() {
+    if [[ ! -f "$LOG_FILE" ]]; then
+        log_message "Erro: Arquivo de log base não encontrado: $LOG_FILE"
+        exit 1
+    fi
+    if [[ "$DELAY" -lt 0 || "$MAX_BACKUPS" -lt 1 ]]; then
+        log_message "Erro: Valores inválidos para DELAY ($DELAY) ou MAX_BACKUPS ($MAX_BACKUPS)"
+        exit 1
+    fi
+}
+
+# Função para rotacionar os arquivos existentes
 rotate_logs() {
-    # Listar arquivos rotacionados ordenados por tempo (do mais antigo para o mais recente)
-    ls -tr "$ARQ".* 2>/dev/null | while read -r ARQUIVO; do
-        SUFX="${ARQUIVO##*.}"  # Sufixo atual (ex.: .1, .gz)
+    log_message "Iniciando rotação de logs para $LOG_FILE"
 
-        if [[ "$SUFX" != "gz" ]]; then
-            # Incrementa o número do sufixo
-            ((++SUFX))
-            mv "$ARQUIVO" "${ARQUIVO%.*}.$SUFX"
+    # Listar e processar os arquivos rotacionados, ordenados pelo tempo (mais antigos primeiro)
+    ls -tr "${LOG_FILE}".* 2>/dev/null | while read -r LOG_ROTATED; do
+        CURRENT_SUFFIX="${LOG_ROTATED##*.}"
 
-            # Compacta se o novo número for maior que DELAY
-            if [[ "$SUFX" -gt "$DELAY" ]]; then
-                gzip "${ARQUIVO%.*}.$SUFX"
+        if [[ "$CURRENT_SUFFIX" != "gz" ]]; then
+            # Arquivos não compactados
+            NEW_SUFFIX=$((CURRENT_SUFFIX + 1))
+            mv "$LOG_ROTATED" "${LOG_ROTATED%.*}.$NEW_SUFFIX"
+            log_message "Rotacionado: $LOG_ROTATED -> ${LOG_ROTATED%.*}.$NEW_SUFFIX"
+
+            if [[ "$NEW_SUFFIX" -gt "$DELAY" ]]; then
+                gzip "${LOG_ROTATED%.*}.$NEW_SUFFIX"
+                log_message "Compactado: ${LOG_ROTATED%.*}.$NEW_SUFFIX.gz"
             fi
         else
-            # Lida com arquivos compactados (.gz)
-            PREFX="${ARQUIVO%.*}"
-            PRESUFX="${PREFX##*.}"
+            # Arquivos compactados
+            PREFIX="${LOG_ROTATED%.*}"
+            COMPRESSED_SUFFIX="${PREFIX##*.}"
 
-            if [[ "$PRESUFX" -lt "$REMOV" ]]; then
-                ((++PRESUFX))
-                mv "$ARQUIVO" "${ARQUIVO%%.*}.$PRESUFX.gz"
+            if [[ "$COMPRESSED_SUFFIX" -lt "$MAX_BACKUPS" ]]; then
+                NEW_COMPRESSED_SUFFIX=$((COMPRESSED_SUFFIX + 1))
+                mv "$LOG_ROTATED" "${LOG_FILE%.*}.$NEW_COMPRESSED_SUFFIX.gz"
+                log_message "Renomeado: $LOG_ROTATED -> ${LOG_FILE%.*}.$NEW_COMPRESSED_SUFFIX.gz"
             else
-                # Remove arquivos excedentes
-                rm "$ARQUIVO"
+                rm "$LOG_ROTATED"
+                log_message "Removido: $LOG_ROTATED (limite de backups atingido)"
             fi
         fi
     done
 }
 
-# Realiza a rotação do arquivo atual
+# Função para rotacionar o arquivo atual
 rotate_current_log() {
-    mv "$ARQ" "$ARQ.1"  # Renomeia o arquivo atual para .1
-    [[ "$DELAY" -eq 0 ]] && gzip "$ARQ.1"  # Compacta imediatamente se DELAY for 0
-    : > "$ARQ"  # Cria um arquivo vazio
+    mv "$LOG_FILE" "${LOG_FILE}.1"
+    log_message "Arquivo atual rotacionado: $LOG_FILE -> ${LOG_FILE}.1"
+
+    if [[ "$DELAY" -eq 0 ]]; then
+        gzip "${LOG_FILE}.1"
+        log_message "Compactado imediatamente: ${LOG_FILE}.1.gz"
+    fi
+
+    : > "$LOG_FILE"
+    log_message "Novo arquivo de log criado: $LOG_FILE"
 }
 
 # Execução principal
+validate_config
 rotate_logs
 rotate_current_log
+log_message "Rotação concluída com sucesso!"
